@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학교자율시간 점검기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 교무실의 점검 서류 — 차분하고 정확하게, 판정은 단호하게
+   IDEA: 결재 서류에 찍히는 검토 도장과 교육과정 편성표의 눈금
+   PICTURE: 교과별 시수 눈금자(허용 범위 띠 + 기준선 + 현재 시수 표식)와 종합 판정 도장
+   COLOUR and TYPE: 칠판 초록 머리띠, 종이색 바탕, 도장 빨강 하나 / Noto Sans KR 4단계 크기
+   LAYOUT: 머리띠에 제목·판정 도장·탭, 아래로 작업 화면 한 열(넓으면 두 열) */
+:root{color-scheme:light dark;
+--bg:light-dark(#fbfaf6,#121615);--card:light-dark(#ffffff,#1a1f1e);--ink:light-dark(#1b1f1d,#e8ebe6);--mute:light-dark(#5f6661,#9aa39d);
+--line:light-dark(#dcd8cc,#2d3532);--soft:light-dark(#f2efe6,#202725);
+--board:#21392f;--board2:#2b4a3d;--chalk:#f2f0e6;
+--red:light-dark(#c3332a,#ff6f61);--warn:light-dark(#9a6412,#f0b44c);--ok:light-dark(#2d6a4c,#7fcfa1);--note:light-dark(#46617a,#9cc0de);
+--band:light-dark(#d9e8dd,#294236)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Noto Sans KR",system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{line-height:1.2;margin:0;text-wrap:balance}
+h2{font-size:22px;font-weight:700}h3{font-size:17px;font-weight:700}
+small,.mute{color:var(--mute)}
+header{background:var(--board);color:var(--chalk);padding:28px max(5vw,16px) 0}
+.top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:center;max-width:1240px;margin:auto}
+header h1{font-size:clamp(30px,4.6vw,46px);font-weight:900;letter-spacing:-.02em}
+header p{margin:8px 0 0;color:#c9d3cb;font-size:15px}
+.stamp{width:132px;height:132px;border:4px solid currentColor;border-radius:50%;display:grid;place-items:center;text-align:center;transform:rotate(-8deg);font-weight:900;font-size:24px;line-height:1.1;color:#ff8a7e;background:rgba(255,255,255,.04)}
+.stamp.ok{color:#9be3b8}.stamp.warn{color:#ffd27a}
+.stamp small{display:block;font-size:12px;font-weight:500;color:inherit;opacity:.85;margin-top:4px}
+.counts{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;font-size:14px}
+.counts span{background:var(--board2);padding:4px 10px;border-radius:99px}
+nav{display:flex;gap:4px;max-width:1240px;margin:22px auto 0;overflow-x:auto}
+nav button{flex:none;background:none;border:0;color:#c9d3cb;font:500 15px "Noto Sans KR",sans-serif;padding:12px 18px;border-radius:10px 10px 0 0;cursor:pointer;min-height:44px}
+nav button[aria-selected=true]{background:var(--bg);color:var(--ink);font-weight:700}
+main{max-width:1240px;margin:auto;padding:28px max(5vw,16px) 64px}
+section[hidden]{display:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:20px}
+.lead{margin:6px 0 16px;color:var(--mute)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media(max-width:900px){.grid2{grid-template-columns:minmax(0,1fr)}}
+label{display:block;font-size:13px;color:var(--mute);margin-bottom:4px}
+input,select,textarea{width:100%;font:16px "Noto Sans KR",sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:44px}
+textarea{min-height:96px;resize:vertical;line-height:1.5}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--note);outline-offset:1px}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.fields .w2{grid-column:span 2}
+@media(max-width:400px){.fields .w2{grid-column:auto}}
+.btn{font:700 15px "Noto Sans KR",sans-serif;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);padding:10px 16px;min-height:44px;cursor:pointer}
+.btn.ghost{background:none;color:var(--ink);border-color:var(--line)}
+.btn.red{background:var(--red);border-color:var(--red);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:middle}
+th{font-size:13px;color:var(--mute);font-weight:500}
+td.n,th.n{text-align:right;white-space:nowrap}
+td input{min-height:38px;padding:6px 8px;text-align:right;max-width:110px;margin-left:auto;display:block}
+.unit{border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:14px;background:var(--bg)}
+.unit h3{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}
+.chk{display:flex;gap:8px;align-items:center;font-size:15px;color:var(--ink);min-height:44px}
+.chk input{width:22px;height:22px;min-height:0}
+/* 판정 목록 */
+.items{list-style:none;margin:0;padding:0}
+.items li{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.v{font-size:13px;font-weight:700;border:2px solid currentColor;border-radius:6px;text-align:center;padding:2px 0;height:fit-content;white-space:nowrap}
+.v.ok{color:var(--ok)}.v.warn{color:var(--warn)}.v.bad{color:var(--red)}.v.note{color:var(--note)}.v.na{color:var(--mute)}
+.items b{font-weight:700}.items .code{color:var(--mute);font-size:13px;margin-right:6px}
+.items p{margin:2px 0 0;font-size:15px}
+.q{border-left:3px solid var(--line);padding-left:10px;margin:6px 0;color:var(--mute);font-size:14px}
+.fix{background:var(--soft);border-radius:8px;padding:8px 10px;font-size:14px;margin-top:6px}
+/* 시수 눈금자 */
+.rules{display:grid;gap:10px}
+.rule{display:grid;grid-template-columns:120px minmax(0,1fr) 92px;gap:14px;align-items:center}
+.rname{font-weight:700;font-size:15px;line-height:1.25}.rname small{display:block;font-weight:400;font-size:13px}
+.track{position:relative;height:34px;background:var(--soft);border-radius:6px}
+.track .band{position:absolute;top:0;bottom:0;background:var(--band);border-radius:6px}
+.track .base{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--mute);transform:translateX(-1px)}
+.track .mark{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--ok);border:2px solid var(--card);transform:translate(-50%,-50%);transition:left .4s}
+.track .mark.bad{background:var(--red);width:18px;height:18px}
+.rnum{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.rnum b{font-size:18px}
+.rnum small{display:block;font-size:13px}
+.rnum.bad b{color:var(--red)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin-top:14px}
+.legend i{display:inline-block;width:18px;height:10px;background:var(--band);border-radius:3px;vertical-align:middle;margin-right:6px}
+.legend i.b{width:2px;height:14px;background:var(--mute)}
+.legend i.m{width:10px;height:10px;border-radius:50%;background:var(--ok)}
+.legend i.r{width:10px;height:10px;border-radius:50%;background:var(--red)}
+.tot{margin-top:12px;font-size:15px}
+@media(max-width:600px){.rule{grid-template-columns:minmax(0,1fr) 84px}.track{grid-column:1/-1;grid-row:2}}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.chips button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:8px 14px;font:500 15px "Noto Sans KR",sans-serif;min-height:44px;cursor:pointer}
+.chips button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chips .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+pre{white-space:pre-wrap;background:var(--soft);border-radius:10px;padding:16px;font:14px/1.6 "Noto Sans KR",sans-serif;max-height:560px;overflow:auto}
+.msg{font-size:14px;margin-top:10px;color:var(--mute)}.msg.err{color:var(--red)}
+.empty{padding:20px;text-align:center;color:var(--mute);border:1px dashed var(--line);border-radius:10px}
+a{color:var(--note)}
+.scroll{overflow-x:auto}
+@media(prefers-reduced-motion:reduce){.track .mark{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div>
+      <h1>학교자율시간 점검기</h1>
+      <p id="sub">초등 3~6학년 · 경기도교육청 2025.10 안내자료 기준</p>
+      <div class="counts" id="counts"></div>
+    </div>
+    <div class="stamp" id="stamp" aria-live="polite"></div>
+  </div>
+  <nav role="tablist">
+    <button role="tab" data-act="tab" data-tab="input">① 편성 입력</button>
+    <button role="tab" data-act="tab" data-tab="hours">② 시수 점검</button>
+    <button role="tab" data-act="tab" data-tab="content">③ 내용 검토</button>
+    <button role="tab" data-act="tab" data-tab="report">④ 체크리스트·보고서</button>
+  </nav>
+</header>
+<main>
+<section id="t-input" hidden>
+  <div class="card">
+    <h2>기본 정보</h2>
+    <p class="lead">처음에는 예시 학교 자료가 들어 있습니다. 입력한 내용은 이 브라우저에만 저장됩니다.</p>
+    <div class="fields">
+      <div class="w2"><label for="f-school">학교명</label><input id="f-school" data-path="school"></div>
+      <div><label for="f-year">학년도</label><select id="f-year" data-path="year"><option>2025</option><option>2026</option><option>2027</option><option>2028</option></select></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn ghost" data-act="sample">예시 자료 다시 넣기</button>
+      <button class="btn ghost" data-act="blank">빈 양식으로 시작</button>
+      <button class="btn ghost" data-act="undo" id="undo" hidden>되돌리기</button>
+    </div>
+  </div>
+  <div class="card" id="ai-import">
+    <h2>문서에서 불러오기 (AI)</h2>
+    <p class="lead">운영계획서나 시간배당표의 내용을 붙여 넣거나, 표를 찍은 사진을 올리면 AI가 아래 양식을 채웁니다. 한글(hwp) 파일은 내용을 복사해 붙여 넣으세요. 불러온 뒤에는 꼭 값을 확인하세요.</p>
+    <label for="imp-text">문서 내용</label>
+    <textarea id="imp-text" placeholder="예: 3학년 1학기 학교자율시간 '마을 한 바퀴'(활동) 29시간, 관련 교과 사회…"></textarea>
+    <div class="row" style="margin-top:12px">
+      <input type="file" id="imp-files" multiple accept="image/*,.txt,.csv,.md,.json" style="max-width:340px">
+      <button class="btn" data-act="extract" id="extract-btn">AI로 불러오기</button>
+    </div>
+    <div class="msg" id="imp-msg"></div>
+  </div>
+  <div class="card">
+    <h2>교과·창체 편성 시수</h2>
+    <p class="lead">학년군(2년) 합계로, <b>학교자율시간을 뺀</b> 시수를 적습니다. 학교자율시간은 아래 목록의 관련 교과에 자동으로 더해집니다.</p>
+    <div class="scroll"><table id="alloc"></table></div>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><h2>학교자율시간 운영 단위</h2><button class="btn" data-act="add">운영 단위 추가</button></div>
+    <div id="units"></div>
+  </div>
+</section>
+
+<section id="t-hours" hidden>
+  <div class="grid2">
+    <div class="card"><h2>교과별 시수 눈금</h2><p class="lead">학교자율시간을 관련 교과에 더한 실제 시수입니다.</p><div id="rulers"></div></div>
+    <div class="card"><h2>시수 판정</h2><p class="lead">규칙에 따라 계산한 결과입니다. AI를 쓰지 않습니다.</p><ul class="items" id="hitems"></ul></div>
+  </div>
+</section>
+
+<section id="t-content" hidden>
+  <div class="chips" id="uchips"></div>
+  <div class="grid2">
+    <div class="card" id="cform"></div>
+    <div>
+      <div class="card"><h2>자동 점검</h2><p class="lead">형식·합계처럼 정답이 있는 항목입니다.</p><ul class="items" id="kitems"></ul></div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between"><h2>AI 내용 검토</h2><button class="btn" data-act="review" id="review-btn">이 단위 검토하기</button></div>
+        <p class="lead">내용체계·성취기준·수준·중립성·평가·차시·도입 취지(C-01~C-07)를 봅니다. AI 1차 의견이며 최종 판단은 교육과정위원회가 합니다.</p>
+        <div id="aires"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="t-report" hidden>
+  <div class="grid2">
+    <div class="card"><h2>확인 체크리스트</h2><p class="lead">계산으로 알 수 없어 사람이 확인해야 하는 항목입니다.</p><div id="manual"></div></div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h2>점검 보고서</h2>
+        <div class="row"><button class="btn ghost" data-act="copy">복사</button><button class="btn" data-act="save" id="save-btn" hidden>파일로 저장</button></div></div>
+      <div class="msg" id="rep-msg"></div>
+      <pre id="report"></pre>
+    </div>
+  </div>
+  <p class="mute" style="font-size:14px">점검 기준: <a href="https://www.goe.go.kr/resource/goe/na/bbs_2675/2025/10/d57c08a1-82ff-4dfc-850a-300808142bc4.pdf">경기도교육청, 초등 학교자율시간 이해와 실제(2025.10)</a>. 지침이 바뀌면 기준 시수와 기한을 다시 확인하세요.</p>
+</section>
+</main>
+
+<script>
+{
+const SUBJ=['국어','사회/도덕','수학','과학/실과','체육','예술','영어','창의적 체험활동'];
+const BASE={'3-4':[408,272,272,204,204,272,136,204],'5-6':[408,272,272,340,204,272,204,204]};
+const TOTAL={'3-4':1972,'5-6':2176}, MIN={'3-4':29,'5-6':32};
+const NODEC=['체육','예술'];
+const CODECH={'국어':['국'],'사회/도덕':['사','도'],'수학':['수'],'과학/실과':['과','실'],'체육':['체'],'예술':['음','미','예'],'영어':['영'],'창의적 체험활동':['창','자','동','진']};
+const MANUAL=[
+ ['reduce','감축한 교과는 줄어든 시수로도 성취기준을 모두 다룰 수 있음(교과 협의 완료)'],
+ ['overcut','특정 교과나 창체 시수가 과도하게 줄지 않음'],
+ ['ahead','다음 학년 내용을 미리 가르치지 않음'],
+ ['level','재구조화 시 성취 수준을 높이지 않음(낮추는 방향만)'],
+ ['neutral','성별·종교·정치 성향 등 민감한 주제에 편향되지 않음'],
+ ['committee','교육과정위원회 협의를 거쳐 학교 교육과정에 반영함'],
+ ['neis1','NEIS 교육과정 편제·시간배당에 학기 최소 시수 이상으로 등록함'],
+ ['neis2','NEIS 평가계획(성취기준·평가요소·평가기준) 등록 후 마감 승인함'],
+ ['record','세특·종합의견에 시간이나 기간을 적지 않도록 안내함'],
+ ['book','인정도서를 쓰면 학기 시작 3개월 전까지 인정 신청함(해당 시)']];
+const flex=b=>Math.floor(b*0.2);
+const bandOf=g=>(+g)<=4?'3-4':'5-6';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=s=>document.querySelector(s);
+const KEY='jayul-check-v1';
+const uid=()=>'u'+Math.random().toString(36).slice(2,8);
+const allocOf=(b,over)=>Object.fromEntries(SUBJ.map((s,i)=>[s,over&&over[s]!=null?over[s]:BASE[b][i]]));
+const blankUnit=()=>({id:uid(),name:'',type:'활동',grade:3,sem:1,hours:29,subj:'',mode:'지속형',council:'',applied:'',approved:'',book:false,bookDate:'',goal:'',area:'',idea:'',know:'',skill:'',value:'',stds:'',lessons:'',assess:''});
+function sample(){return{school:'예시초등학교',year:'2026',alloc:{'3-4':allocOf('3-4',{'과학/실과':175}),'5-6':allocOf('5-6',{'과학/실과':310})},manual:{},ai:{},sel:'u1',units:[
+ {...blankUnit(),id:'u1',name:'마을 한 바퀴',type:'활동',grade:3,sem:1,hours:29,subj:'사회/도덕',mode:'지속형',council:'2026-02-20',
+  goal:'우리 마을의 장소와 사람을 직접 만나 탐구하고, 마을의 일원으로서 실천하는 태도를 기른다.',area:'마을의 장소 / 마을 사람들의 삶 / 마을을 위한 실천',
+  know:'마을의 주요 장소와 역할, 마을 사람들이 하는 일',skill:'마을 지도 그리기, 면담하기, 조사 결과 발표하기',value:'마을에 대한 애정, 공동체 의식',
+  stds:'[3사마을01-01] 마을의 주요 장소를 직접 둘러보고 지도로 나타내며 장소의 역할을 설명한다.\n[3사마을02-01] 마을 사람들을 면담하여 하는 일을 조사하고, 서로 돕는 삶의 모습을 소중히 여긴다.\n[3사마을03-01] 마을을 위해 실천할 일을 정하고 친구들과 협력하여 실천한다.',
+  lessons:'마을 장소 탐방과 지도 그리기 (8)\n마을 사람 면담 조사 (10)\n마을 실천 프로젝트와 발표 (11)',
+  assess:'[3사마을01-01] 마을 지도 그리기 – 관찰평가, 4월\n[3사마을02-01] 면담 보고서 – 서술형, 5월\n[3사마을03-01] 실천 프로젝트 – 자기·동료평가, 7월\n성취수준: 매우 잘함 / 잘함 / 보통 / 노력 요함'},
+ {...blankUnit(),id:'u2',name:'AI와 함께 사는 우리',type:'과목',grade:5,sem:2,hours:30,subj:'과학/실과',mode:'혼합형',council:'2025-08-20',applied:'2025-09-10',
+  goal:'인공지능의 원리를 이해하고 생활 속 문제를 인공지능으로 해결해 본다.',area:'인공지능 이해 / 인공지능 활용',idea:'',
+  know:'인공지능의 뜻, 데이터와 학습의 관계',skill:'데이터 모으기, 분류 모델 만들어 보기',value:'',
+  stds:'[5과AI01-01] 인공지능이 생활에서 쓰이는 예를 찾고 그 원리를 설명한다.\n[5AI02-01] 데이터를 모아 분류 모델을 만들고 고등학교 수준의 신경망 구조를 분석한다.',
+  lessons:'인공지능 탐색 (10)\n분류 모델 만들기 (12)\n발표 (6)',
+  assess:'[5과AI01-01] 보고서 평가, 10월'}]};}
+function blank(){return{school:'',year:'2026',alloc:{'3-4':allocOf('3-4'),'5-6':allocOf('5-6')},manual:{},ai:{},sel:null,units:[]};}
+let st; try{st=JSON.parse(localStorage.getItem(KEY))}catch(e){} if(!st||!st.alloc)st=sample();
+let snap=null, tab='hours';
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
+const keep=()=>{snap=JSON.stringify(st);$('#undo').hidden=false};
+
+/* ---------- 판정 엔진 ---------- */
+const mk=v=>(code,title,detail,extra)=>({v,code,title,detail,...extra});
+const OK=mk('ok'),WARN=mk('warn'),BAD=mk('bad'),NOTE=mk('note');
+const uname=u=>`「${u.name||'이름 없음'}」`;
+function hoursCheck(){
+ const items=[],bands={},yr=+st.year;
+ const req=yr<=2025?['3-4']:['3-4','5-6'];
+ for(const b of ['3-4','5-6']){
+  const us=st.units.filter(u=>bandOf(u.grade)===b);
+  const rows=SUBJ.map((s,i)=>{const base=BASE[b][i],al=+st.alloc[b][s]||0,au=us.filter(u=>u.subj===s).reduce((a,u)=>a+(+u.hours||0),0),eff=al+au,f=flex(base),lo=NODEC.includes(s)?base:base-f,hi=base+f;return{s,base,al,au,eff,lo,hi,ok:eff>=lo&&eff<=hi}});
+  const total=rows.reduce((a,r)=>a+r.eff,0);
+  bands[b]={rows,total,on:req.includes(b)||us.length>0};
+  if(!bands[b].on)continue;
+  if(req.includes(b))items.push(us.length?OK('H-01',`${b}학년군 편성`,`운영 단위 ${us.length}개가 편성됨`):BAD('H-01',`${b}학년군 편성`,`${b}학년군에 학교자율시간이 없음. ${yr}학년도에는 ${b}학년 중 1개 학기 이상 편성해야 함`));
+  let allOk=true;
+  for(const r of rows){if(r.ok)continue;allOk=false;const nd=NODEC.includes(r.s);
+   if(nd&&r.eff<r.base)items.push(BAD('H-05',`${b}학년군 ${r.s}`,`감축할 수 없는 교과인데 ${r.eff}시간으로 기준 ${r.base}시간보다 ${r.base-r.eff}시간 적음. ${r.s}에 편성한 학교자율시간만 합산됨`));
+   else items.push(BAD('H-04',`${b}학년군 ${r.s}`,`${r.eff}시간으로 허용 범위 ${r.lo}~${r.hi}시간을 벗어남(${r.eff<r.lo?(r.lo-r.eff)+'시간 부족':(r.eff-r.hi)+'시간 초과'})`));}
+  if(allOk)items.push(OK('H-04',`${b}학년군 교과·창체 증감`,'모든 교과(군)·창체가 기준 ±20% 안이고, 체육·예술은 기준 이상임'));
+  const T=TOTAL[b];
+  if(total<T)items.push(BAD('H-10',`${b}학년군 총 수업시수`,`합계 ${total}시간으로 기준 ${T}시간보다 ${T-total}시간 적음`));
+  else if(total>T)items.push(WARN('H-10',`${b}학년군 총 수업시수`,`합계 ${total}시간으로 기준 ${T}시간보다 ${total-T}시간 많음. 학습 부담이 늘지 않는지 확인`));
+  else items.push(OK('H-10',`${b}학년군 총 수업시수`,`합계 ${T}시간으로 기준과 같음`));
+  for(const r of rows)if(r.ok&&r.eff<r.base)items.push(NOTE('H-09',`${b}학년군 ${r.s} 감축`,`${r.base-r.eff}시간 줄었음. 줄어든 시수로 성취기준을 모두 다룰 수 있는지 교과 협의로 확인`));
+ }
+ const issues={};const add=(it)=>{issues[it.code]=1;items.push(it)};
+ const names={};
+ for(const u of st.units){
+  const m=MIN[bandOf(u.grade)],h=+u.hours||0;
+  if(h<m)add(BAD('H-02',uname(u),`${u.grade}학년 ${u.sem}학기 ${h}시간으로 학기 최소 ${m}시간보다 ${m-h}시간 부족`));
+  if(!u.subj)add(BAD('H-06',uname(u),'관련 교과(군)가 정해지지 않음. 활동·과목 모두 관련 교과에 편성해야 함'));
+  if(!u.name)add(WARN('H-07',uname(u),'과목(활동)명이 없음'));
+  else (names[u.name.trim()]=names[u.name.trim()]||[]).push(u);
+  const yr=+st.year;
+  if(u.type==='과목'){const dl=`${yr-1}-08-31`;
+   if(!u.applied)add(BAD('H-08',uname(u),`과목 승인 신청일이 없음. 전년도 8월 31일(${dl})까지 신청해야 함`));
+   else if(u.applied>dl)add(BAD('H-08',uname(u),`승인 신청일 ${u.applied}이 기한 ${dl}을 지남`));
+   if(!u.council)add(WARN('H-08',uname(u),'학교운영위원회 심의일이 없음'));
+   if(!u.approved)add(WARN('H-08',uname(u),'교육감 승인일이 없음. 승인 전에는 운영할 수 없음'));
+  }else if(!u.council)add(WARN('H-08',uname(u),'학교운영위원회 심의일이 없음(심의 후 학교장 결재)'));
+  if(u.book){const dl=+u.sem===1?`${yr-1}-12-01`:`${yr}-06-01`;
+   if(!u.bookDate)add(WARN('H-08',uname(u),`인정도서 신청일이 없음. 학기 시작 3개월 전(${dl})까지 신청`));
+   else if(u.bookDate>dl)add(BAD('H-08',uname(u),`인정도서 신청일 ${u.bookDate}이 기한 ${dl}을 지남`));}
+ }
+ for(const [n,us] of Object.entries(names)){
+  const byG={};for(const u of us)(byG[u.grade]=byG[u.grade]||new Set()).add(+u.sem);
+  for(const [g,s] of Object.entries(byG))if(s.size>1)add(BAD('H-03',`「${n}」`,`${g}학년 1학기와 2학기에 나뉘어 있음. 한 학기 안에서 운영해야 함`));
+  if(us.length>1){const same=us.filter((u,i)=>us.findIndex(x=>x.grade==u.grade&&x.sem==u.sem)!==i);
+   if(same.length)add(BAD('H-07',`「${n}」`,'같은 학기에 같은 이름이 두 번 편성됨'));
+   else if(Object.values(byG).every(s=>s.size<2))add(WARN('H-07',`「${n}」`,`이름이 ${us.length}번 쓰임. 활동명은 학교 안에서 겹칠 수 없으니 학년을 구분하는 이름인지 확인`));}
+ }
+ if(st.units.length){const T={'H-02':'학기 최소 시수','H-03':'학기 단위 운영','H-06':'관련 교과 편성','H-07':'이름 중복','H-08':'심의·승인 절차와 기한'};
+  for(const [c,t] of Object.entries(T))if(!issues[c])items.push(OK(c,t,'모든 운영 단위가 기준을 충족함'));}
+ const ord={bad:0,warn:1,note:2,ok:3};items.sort((a,b)=>ord[a.v]-ord[b.v]||a.code.localeCompare(b.code));
+ return{items,bands};
+}
+const lines=t=>String(t||'').split('\n').map(s=>s.trim()).filter(Boolean);
+const STDRE=/^\[(\d)([가-힣])([^\d\]]+)(\d{2})-(\d{2})\]/;
+function lessonSum(t){let n=0,found=0;for(const l of lines(t)){const m=l.match(/\((\d+)\)\s*$/);if(m){n+=+m[1];found++}}return found?n:null}
+function contentCheck(u){
+ const out=[],ls=lines(u.stds);
+ if(!ls.length)out.push(BAD('K-01','성취기준','성취기준이 없음'));
+ else{const errs=[],codes=[];
+  for(const l of ls){const m=l.match(STDRE);
+   if(!m){errs.push(`형식이 맞지 않음: ${l.slice(0,20)}…`);continue}
+   codes.push(m[0]);
+   if(m[1]!=String(u.grade))errs.push(`${m[0]} 학년 숫자가 ${u.grade}이 아님`);
+   if(u.subj&&!(CODECH[u.subj]||[]).includes(m[2]))errs.push(`${m[0]} 교과 글자가 관련 교과(${u.subj})와 다름`);}
+  const dup=codes.filter((c,i)=>codes.indexOf(c)!==i);if(dup.length)errs.push(`코드 중복: ${[...new Set(dup)].join(', ')}`);
+  out.push(errs.length?WARN('K-01','성취기준 코드',errs.join(' / ')):OK('K-01','성취기준 코드',`${ls.length}개 모두 [학년+교과 첫 글자+약칭+영역-번호] 형식임`));}
+ const miss=[['지식·이해',u.know],['과정·기능',u.skill],['가치·태도',u.value]].filter(x=>!String(x[1]||'').trim()).map(x=>x[0]);
+ out.push(miss.length?BAD('K-02','내용 요소 3범주',`${miss.join(', ')} 요소가 비어 있음`):OK('K-02','내용 요소 3범주','지식·이해, 과정·기능, 가치·태도가 모두 있음'));
+ if(u.type==='과목'&&!String(u.idea||'').trim())out.push(BAD('K-02','핵심 아이디어','과목은 핵심 아이디어를 제시해야 함'));
+ if(!String(u.area||'').trim())out.push(WARN('K-02','영역','영역 구분이 없음'));
+ const s=lessonSum(u.lessons),h=+u.hours||0;
+ if(s===null)out.push(WARN('K-03','차시 계획','줄 끝 괄호 안의 차시 수를 찾지 못함. 예: 마을 탐방 (8)'));
+ else out.push(s===h?OK('K-03','차시 합계',`${s}차시로 편성 시수와 같음`):BAD('K-03','차시 합계',`차시 합계 ${s}차시가 편성 시수 ${h}시간과 ${Math.abs(s-h)}만큼 다름`));
+ const a=String(u.assess||'');
+ if(!a.trim())out.push(BAD('K-04','평가 계획','평가 계획이 없음'));
+ else{const lv=['매우 잘함','보통','노력 요함'].filter(x=>!a.replace(/\s/g,'').includes(x.replace(/\s/g,'')));
+  out.push(lv.length?WARN('K-04','성취수준',`4단계(매우 잘함·잘함·보통·노력 요함) 중 ${lv.join(', ')}이(가) 보이지 않음`):OK('K-04','성취수준','4단계 성취수준이 있음'));
+  const codes=ls.map(l=>(l.match(STDRE)||[])[0]).filter(Boolean),un=codes.filter(c=>!a.includes(c));
+  if(un.length)out.push(NOTE('K-04','평가 연계',`평가 계획에 없는 성취기준: ${un.join(', ')}`));}
+ if(!String(u.goal||'').trim())out.push(WARN('K-05','성격·목표','성격·목표가 없음'));
+ const ord={bad:0,warn:1,note:2,ok:3};return out.sort((x,y)=>ord[x.v]-ord[y.v]);
+}
+function aiItems(u){const r=st.ai[u.id];if(!r||!r.checks)return[];const map={'적합':'ok','주의':'warn','부적합':'bad','확인불가':'note'};
+ return r.checks.map(c=>({v:map[c.verdict]||'note',code:c.code,title:c.title||'',detail:c.reason,quote:c.quote,revision:c.revision}));}
+function overall(){const H=hoursCheck();const all=[...H.items];for(const u of st.units)all.push(...contentCheck(u),...aiItems(u));
+ const c={bad:0,warn:0,note:0,ok:0};for(const i of all)c[i.v]++;
+ const man=MANUAL.filter(m=>!st.manual[m[0]]).length;
+ return{H,c,man,v:c.bad?'bad':c.warn?'warn':'ok'};}
+
+/* ---------- 화면 ---------- */
+const VL={ok:'적합',warn:'주의',bad:'부적합',note:'확인',na:'-'};
+const itemHTML=i=>`<li><span class="v ${i.v}">${VL[i.v]}</span><div><span class="code">${esc(i.code)}</span><b>${esc(i.title)}</b><p>${esc(i.detail)}</p>${i.quote?`<div class="q">${esc(i.quote)}</div>`:''}${i.revision?`<div class="fix">수정 제안: ${esc(i.revision)}</div>`:''}</div></li>`;
+const opt=(arr,val)=>arr.map(o=>`<option${String(o)===String(val)?' selected':''}>${esc(o)}</option>`).join('');
+function renderInputs(){
+ $('#f-school').value=st.school||'';$('#f-year').value=st.year;
+ $('#alloc').innerHTML=`<thead><tr><th>교과(군)</th><th class="n">3~4 기준</th><th class="n">3~4 편성</th><th class="n">5~6 기준</th><th class="n">5~6 편성</th></tr></thead><tbody>${SUBJ.map((s,i)=>`<tr><td>${s}${NODEC.includes(s)?' <small>(감축 불가)</small>':''}</td><td class="n">${BASE['3-4'][i]} <small>±${flex(BASE['3-4'][i])}</small></td><td><input inputmode="numeric" aria-label="3~4학년군 ${s} 편성" data-path="alloc.3-4.${s}" value="${esc(st.alloc['3-4'][s])}"></td><td class="n">${BASE['5-6'][i]} <small>±${flex(BASE['5-6'][i])}</small></td><td><input inputmode="numeric" aria-label="5~6학년군 ${s} 편성" data-path="alloc.5-6.${s}" value="${esc(st.alloc['5-6'][s])}"></td></tr>`).join('')}</tbody>`;
+ $('#units').innerHTML=st.units.length?st.units.map((u,n)=>{const p=`u.${u.id}.`;return`<div class="unit"><h3><span>${n+1}. ${esc(u.name||'이름 없음')}</span><button class="btn ghost" data-act="del" data-id="${u.id}">삭제</button></h3><div class="fields">
+ <div class="w2"><label>과목(활동)명</label><input data-path="${p}name" value="${esc(u.name)}"></div>
+ <div><label>유형</label><select data-path="${p}type">${opt(['활동','과목'],u.type)}</select></div>
+ <div><label>학년</label><select data-path="${p}grade">${opt([3,4,5,6],u.grade)}</select></div>
+ <div><label>학기</label><select data-path="${p}sem">${opt([1,2],u.sem)}</select></div>
+ <div><label>시수</label><input inputmode="numeric" data-path="${p}hours" value="${esc(u.hours)}"></div>
+ <div><label>관련 교과(군)</label><select data-path="${p}subj"><option value="">선택</option>${opt(SUBJ,u.subj)}</select></div>
+ <div><label>운영 형태</label><select data-path="${p}mode">${opt(['지속형','집중형','혼합형'],u.mode)}</select></div>
+ <div><label>학운위 심의일</label><input type="date" data-path="${p}council" value="${esc(u.council)}"></div>
+ <div><label>승인 신청일 (과목)</label><input type="date" data-path="${p}applied" value="${esc(u.applied)}"></div>
+ <div><label>교육감 승인일 (과목)</label><input type="date" data-path="${p}approved" value="${esc(u.approved)}"></div>
+ <div><label class="chk"><input type="checkbox" data-path="${p}book"${u.book?' checked':''}> 인정도서 사용</label></div>
+ <div><label>인정도서 신청일</label><input type="date" data-path="${p}bookDate" value="${esc(u.bookDate)}"></div>
+ </div></div>`}).join(''):'<div class="empty">운영 단위가 없습니다. 추가하거나 문서에서 불러오세요.</div>';
+ renderCForm();
+}
+function renderCForm(){
+ const u=st.units.find(x=>x.id===st.sel)||st.units[0];if(u)st.sel=u.id;
+ if(!u){$('#cform').innerHTML='<div class="empty">먼저 ① 편성 입력에서 운영 단위를 추가하세요.</div>';return}
+ const p=`u.${u.id}.`,ta=(k,l,ph,h)=>`<div style="margin-top:12px"><label for="c-${k}">${l}</label><textarea id="c-${k}" data-path="${p}${k}" placeholder="${esc(ph||'')}"${h?` style="min-height:${h}px"`:''}>${esc(u[k])}</textarea></div>`;
+ $('#cform').innerHTML=`<h2>${esc(u.name||'이름 없음')}</h2><p class="lead">${esc(u.type)} · ${u.grade}학년 ${u.sem}학기 · ${esc(u.hours)}시간 · ${esc(u.subj||'관련 교과 미정')}</p>
+ ${ta('goal','성격·목표')}${ta('area','영역','예: 마을의 장소 / 마을 사람들의 삶',60)}${ta('idea','핵심 아이디어 (과목은 필수)','',60)}
+ ${ta('know','지식·이해','',60)}${ta('skill','과정·기능','',60)}${ta('value','가치·태도','',60)}
+ ${ta('stds','성취기준 (한 줄에 하나)','[3사마을01-01] …',140)}${ta('lessons','차시 계획 (줄 끝 괄호에 차시 수)','마을 장소 탐방 (8)',100)}${ta('assess','평가 계획','성취기준별 평가요소·방법·시기, 성취수준 4단계',120)}`;
+}
+function renderResults(){
+ const O=overall(),H=O.H;
+ const sv=O.v,lab={ok:'적합',warn:'보완 필요',bad:'부적합'}[sv];
+ $('#stamp').className='stamp '+sv;$('#stamp').innerHTML=`<div>${lab}<small>종합 판정</small></div>`;
+ $('#sub').textContent=`${st.school||'학교명 미입력'} · ${st.year}학년도 · 초등 3~6학년 · 경기도교육청 2025.10 안내자료 기준`;
+ $('#counts').innerHTML=`<span>부적합 ${O.c.bad}</span><span>주의 ${O.c.warn}</span><span>확인 ${O.c.note}</span><span>적합 ${O.c.ok}</span><span>체크리스트 남음 ${O.man}</span>`;
+ $('#hitems').innerHTML=H.items.map(itemHTML).join('')||'<li><span class="v na">-</span><div>점검할 자료가 없습니다.</div></li>';
+ $('#rulers').innerHTML=['3-4','5-6'].filter(b=>H.bands[b].on).map(b=>{const B=H.bands[b];return`<h3 style="margin:8px 0 12px">${b}학년군</h3><div class="rules">${B.rows.map(r=>{const s0=Math.min(r.base*0.72,r.eff),s1=Math.max(r.base*1.28,r.eff),pc=v=>((v-s0)/(s1-s0)*100).toFixed(2);
+  return`<div class="rule"><div class="rname">${r.s}<small>기준 ${r.base}</small></div><div class="track" role="img" aria-label="${r.s} ${r.eff}시간, 허용 ${r.lo}~${r.hi}시간"><span class="band" style="left:${pc(r.lo)}%;width:${(pc(r.hi)-pc(r.lo)).toFixed(2)}%"></span><span class="base" style="left:${pc(r.base)}%"></span><span class="mark${r.ok?'':' bad'}" style="left:${pc(r.eff)}%"></span></div><div class="rnum${r.ok?'':' bad'}"><b>${r.eff}</b><small>${r.au?`${r.al}+자율 ${r.au}`:'자율 없음'}</small></div></div>`}).join('')}</div><div class="tot">총 수업시수 <b>${B.total}</b> / 기준 ${TOTAL[b]}시간</div>`}).join('')+`<div class="legend"><span><i></i>허용 범위(±20%, 체육·예술은 기준 이상)</span><span><i class="b"></i>기준 시수</span><span><i class="m"></i>범위 안</span><span><i class="r"></i>범위 밖</span></div>`;
+ const u=st.units.find(x=>x.id===st.sel);
+ $('#uchips').innerHTML=st.units.map(x=>{const it=[...contentCheck(x),...aiItems(x)],v=it.some(i=>i.v==='bad')?'bad':it.some(i=>i.v==='warn')?'warn':'ok';return`<button data-act="sel" data-id="${x.id}" aria-pressed="${x.id===st.sel}"><span class="dot" style="background:var(--${v==='bad'?'red':v})"></span>${esc(x.name||'이름 없음')}</button>`}).join('');
+ $('#kitems').innerHTML=u?contentCheck(u).map(itemHTML).join(''):'';
+ const r=u&&st.ai[u.id];
+ $('#aires').innerHTML=!u?'':r?`${r.error?`<p class="msg err">${esc(r.error)}</p>`:''}<ul class="items">${aiItems(u).map(itemHTML).join('')}</ul>${r.strengths&&r.strengths.length?`<h3 style="margin-top:14px">잘된 점</h3><ul>${r.strengths.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`:''}${r.priority&&r.priority.length?`<h3>먼저 고칠 것</h3><ol>${r.priority.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>`:''}<p class="msg">검토 시각: ${esc(r.at||'')} · 내용을 고쳤다면 다시 검토하세요.</p>`:`<div class="empty">${S?'버튼을 누르면 AI가 이 단위를 검토합니다.':'이 화면에서는 AI 검토를 쓸 수 없습니다. 자동 점검과 체크리스트는 그대로 쓸 수 있습니다.'}</div>`;
+ $('#manual').innerHTML=MANUAL.map(([k,t])=>`<label class="chk"><input type="checkbox" data-man="${k}"${st.manual[k]?' checked':''}> ${t}</label>`).join('');
+ $('#report').textContent=reportText(O);
+ save();
+}
+function reportText(O){
+ const L=[],d=new Date(),ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+ const tag=i=>`[${VL[i.v]}] ${i.code} ${i.title}: ${i.detail}`;
+ L.push(`${st.school||'학교명 미입력'} ${st.year}학년도 학교자율시간 점검 결과`,`점검일 ${ds} · 종합 판정: ${{ok:'적합',warn:'보완 필요',bad:'부적합'}[O.v]} (부적합 ${O.c.bad}, 주의 ${O.c.warn}, 확인 ${O.c.note})`,'');
+ L.push('1. 운영 단위 현황');for(const u of st.units)L.push(`- ${u.name||'이름 없음'} (${u.type}, ${u.grade}학년 ${u.sem}학기, ${u.hours}시간, 관련 교과 ${u.subj||'미정'}, ${u.mode})`);
+ L.push('','2. 시수 점검');for(const b of ['3-4','5-6'])if(O.H.bands[b].on)L.push(`- ${b}학년군 총 ${O.H.bands[b].total}시간 / 기준 ${TOTAL[b]}시간`);
+ for(const i of O.H.items.filter(i=>i.v!=='ok'))L.push('- '+tag(i));
+ const okc=O.H.items.filter(i=>i.v==='ok').length;if(okc)L.push(`- 그 밖의 ${okc}개 항목 적합`);
+ L.push('','3. 운영 단위별 내용 점검');
+ for(const u of st.units){L.push(`■ ${u.name||'이름 없음'}`);
+  for(const i of contentCheck(u))L.push('  - '+tag(i));
+  const a=aiItems(u);if(a.length){L.push('  [AI 검토]');for(const i of a){L.push('  - '+tag(i));if(i.quote)L.push(`      원문: ${i.quote}`);if(i.revision)L.push(`      수정 제안: ${i.revision}`);}}
+  else L.push('  [AI 검토] 아직 하지 않음');}
+ L.push('','4. 확인 체크리스트');for(const [k,t] of MANUAL)L.push(`${st.manual[k]?'[확인]':'[미확인]'} ${t}`);
+ L.push('','※ 본 결과는 경기도교육청 「초등 학교자율시간 이해와 실제」(2025.10) 기준의 자동 점검과 AI 1차 검토이며, 최종 판단은 학교 교육과정위원회가 함.');
+ return L.join('\n');
+}
+function showTab(t){tab=t;for(const s of ['input','hours','content','report'])$('#t-'+s).hidden=s!==t;document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t))}
+
+/* ---------- 입력 처리 ---------- */
+function setPath(path,val){const p=path.split('.');
+ if(p[0]==='u'){const u=st.units.find(x=>x.id===p[1]);if(!u)return;const k=p[2];u[k]=['grade','sem'].includes(k)?+val:k==='hours'?(val===''?'':+val||0):val;return}
+ if(p[0]==='alloc'){st.alloc[p[1]][p.slice(2).join('.')]=val===''?'':+val||0;return}
+ st[p[0]]=val;}
+document.addEventListener('input',e=>{const t=e.target;
+ if(t.dataset.path){setPath(t.dataset.path,t.type==='checkbox'?t.checked:t.value);renderResults();
+  if(t.dataset.path.endsWith('.name')){const h=t.closest('.unit');if(h)h.querySelector('h3 span').textContent=h.querySelector('h3 span').textContent.replace(/^(\d+\.).*/,`$1 ${t.value||'이름 없음'}`)}}
+ if(t.dataset.man){st.manual[t.dataset.man]=t.checked;renderResults()}});
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;
+ if(a==='tab'){showTab(b.dataset.tab);if(b.dataset.tab==='content')renderCForm()}
+ if(a==='add'){keep();const u=blankUnit();st.units.push(u);st.sel=u.id;renderInputs();renderResults()}
+ if(a==='del'){keep();st.units=st.units.filter(u=>u.id!==b.dataset.id);delete st.ai[b.dataset.id];renderInputs();renderResults()}
+ if(a==='sample'){keep();st=sample();renderInputs();renderResults()}
+ if(a==='blank'){keep();st=blank();renderInputs();renderResults()}
+ if(a==='undo'&&snap){st=JSON.parse(snap);snap=null;$('#undo').hidden=true;renderInputs();renderResults()}
+ if(a==='sel'){st.sel=b.dataset.id;renderCForm();renderResults()}
+ if(a==='review')review(b);
+ if(a==='extract')extract(b);
+ if(a==='copy'){try{await navigator.clipboard.writeText($('#report').textContent);$('#rep-msg').textContent='보고서를 복사했습니다.'}catch(err){$('#rep-msg').textContent='복사하지 못했습니다. 보고서 글을 직접 선택해 복사하세요.'}}
+ if(a==='save'&&D){try{await D.save({filename:`${st.school||'학교'}_학교자율시간_점검결과.txt`,data:$('#report').textContent});$('#rep-msg').textContent='저장을 요청했습니다.'}catch(err){$('#rep-msg').textContent='저장하지 못했습니다. 복사 버튼을 쓰세요.'}}
+});
+
+/* ---------- AI ---------- */
+let S=null,D=null;
+const RULES=`C-01 내용체계: 영역과 지식·이해/과정·기능/가치·태도 3범주가 갖춰졌는가. 과목이면 핵심 아이디어가 있는가.
+C-02 성취기준: 각 성취기준이 두 개 이상 범주를 결합한 문장인가. 과목이면 국가 성취기준을 그대로 쓰지 않고 새로 개발했는가.
+C-03 수준: 관련 교과의 해당 학년군 수준보다 높거나, 상위 학년·상급 학교 내용을 미리 다루지 않는가.
+C-04 중립성: 성별·종교·정치 성향 등에서 한쪽 입장을 가르치거나 한쪽 자료만 제시하지 않는가.
+C-05 평가: 성취기준마다 평가요소·방법·성취수준(매우 잘함/잘함/보통/노력 요함)·시기가 있고 서로 맞물리는가. 지식·기능·태도가 균형을 이루는가.
+C-06 차시: 차시 계획이 편성 시수와 맞고 모든 성취기준이 차시에 배정되었는가.
+C-07 도입 취지: 지역·학교 여건과 학생 필요가 드러나는가. 관련 교과의 단순 반복·보충에 그치지 않는가.`;
+async function review(btn){
+ const u=st.units.find(x=>x.id===st.sel);if(!u||!S)return;
+ btn.disabled=true;$('#aires').innerHTML='<div class="empty">AI가 검토하는 중입니다… (30초쯤 걸릴 수 있음)</div>';
+ const unit={이름:u.name,유형:u.type,학년:u.grade,학기:u.sem,시수:u.hours,관련교과:u.subj,운영형태:u.mode,성격목표:u.goal,영역:u.area,핵심아이디어:u.idea,지식이해:u.know,과정기능:u.skill,가치태도:u.value,성취기준:u.stds,차시계획:u.lessons,평가계획:u.assess};
+ const auto=contentCheck(u).map(i=>`${i.code} ${VL[i.v]}: ${i.title} - ${i.detail}`).join('\n');
+ const prompt=`당신은 2022 개정 교육과정 초등 학교자율시간을 검토하는 경기도 교육과정 장학사입니다. 아래 운영 단위를 기준 C-01~C-07 각각에 대해 판정하세요.
+원칙:
+1. 근거는 아래 자료에서만 가져온다. 지침을 지어내지 않는다.
+2. 시수·차시 계산은 하지 않는다. '자동 점검 결과'를 사실로 받아들인다.
+3. 문제를 지적할 때는 원문 문장을 quote에 그대로 인용한다.
+4. revision에는 교사가 그대로 붙여 넣을 수 있는 고친 문장을 쓴다. 고칠 것이 없으면 빈 문자열.
+5. verdict는 적합, 주의, 부적합, 확인불가 중 하나. 자료가 없으면 확인불가로 두고 무엇이 필요한지 reason에 쓴다.
+6. 민감한 주제는 어느 입장도 취하지 않고 편향 여부만 본다.
+7. 공문서 문체(~함, ~임)로 간결하게 쓴다.
+기준:
+${RULES}
+자동 점검 결과:
+${auto}
+운영 단위:
+${JSON.stringify(unit,null,1)}
+다음 JSON만 출력하세요:
+{"checks":[{"code":"C-01","title":"내용체계","verdict":"","reason":"","quote":"","revision":""}],"strengths":["잘된 점 1~3개"],"priority":["먼저 고칠 것 최대 3개"]}`;
+ try{let r=await S.json(prompt,{modelTier:'default'});if(typeof r==='string')r=JSON.parse(r);
+  if(!r||!Array.isArray(r.checks))throw{message:'AI 응답 형식이 맞지 않습니다. 다시 시도하세요.'};
+  const d=new Date();r.at=`${d.toLocaleDateString('ko-KR')} ${d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`;st.ai[u.id]=r;}
+ catch(err){st.ai[u.id]={checks:[],error:err&&err.code==='rate_limited'?'요청이 많습니다. 잠시 뒤 다시 시도하세요.':err&&err.code==='not_granted'?'AI 사용이 허용되지 않았습니다.':(err&&err.message)||'검토하지 못했습니다.'};}
+ btn.disabled=false;renderResults();
+}
+async function extract(btn){
+ if(!S)return;const msg=$('#imp-msg');let text=$('#imp-text').value.trim();const imgs=[];
+ for(const f of $('#imp-files').files){if(f.type.startsWith('image/'))imgs.push(f);else text+='\n'+await f.text();}
+ if(!text&&!imgs.length){msg.textContent='문서 내용을 붙여 넣거나 파일을 고르세요.';return}
+ let canImg=false;try{canImg=!!(await S.limits()).images}catch(e){}
+ if(imgs.length&&!canImg){msg.textContent='이 화면에서는 사진을 읽을 수 없습니다. 내용을 글로 붙여 넣으세요.';return}
+ btn.disabled=true;msg.className='msg';msg.textContent='AI가 문서를 읽는 중입니다…';
+ const prompt=`학교 문서(글 또는 표 사진)에서 초등 학교자율시간 점검에 필요한 값을 뽑아 JSON만 출력하세요.
+규칙: 문서에 없는 값은 빼거나 빈 문자열로 둔다. 숫자는 문서에 적힌 그대로 옮기고 직접 더하지 않는다. 교과명은 다음 중 하나로 맞춘다: ${SUBJ.join(', ')}. 날짜는 YYYY-MM-DD.
+alloc: 학년별(3,4,5,6) 교과·창체 연간 시수. 학교자율시간이 교과 칸에 포함돼 있으면 그대로 두고 uncertain에 그 사실을 적는다.
+units: 학교자율시간 과목·활동 목록. type은 활동 또는 과목. stds는 성취기준을 줄바꿈으로, lessons는 '차시 내용 (차시수)' 형식 줄들로.
+uncertain: 읽기 어렵거나 확실하지 않은 부분.
+출력: {"school":"","year":"","alloc":{"3":{"국어":0}},"units":[{"name":"","type":"","grade":3,"sem":1,"hours":0,"subj":"","mode":"","council":"","applied":"","approved":"","goal":"","area":"","idea":"","know":"","skill":"","value":"","stds":"","lessons":"","assess":""}],"uncertain":[""]}
+<document>
+${text}
+</document>`;
+ try{let r=await S.json(prompt,imgs.length?{images:imgs}:{});if(typeof r==='string')r=JSON.parse(r);
+  keep();const notes=[];
+  if(r.school)st.school=r.school;if(r.year&&/^20\d\d$/.test(String(r.year)))st.year=String(r.year);
+  const al=r.alloc||{};for(const [b,g1,g2] of [['3-4','3','4'],['5-6','5','6']]){
+   if(al[g1]&&al[g2]){for(const s of SUBJ){const x=al[g1][s],y=al[g2][s];if(x!=null&&y!=null)st.alloc[b][s]=(+x||0)+(+y||0)}notes.push(`${b}학년군 시간배당을 두 학년 합으로 넣음`)}
+   else if(al[g1]||al[g2])notes.push(`${b}학년군은 한 학년 자료만 있어 시간배당을 바꾸지 않음`);}
+  if(Array.isArray(r.units)&&r.units.length){st.units=r.units.map(x=>{const u={...blankUnit(),...x,id:uid()};u.grade=+u.grade||3;u.sem=+u.sem||1;u.hours=+u.hours||0;if(!['활동','과목'].includes(u.type))u.type='활동';if(!SUBJ.includes(u.subj))u.subj='';if(!['지속형','집중형','혼합형'].includes(u.mode))u.mode='지속형';return u});st.ai={};st.sel=st.units[0].id;notes.push(`운영 단위 ${st.units.length}개를 불러옴`)}
+  const unc=(r.uncertain||[]).filter(Boolean);
+  msg.innerHTML=`${esc(notes.join(' · ')||'불러올 값을 찾지 못했습니다.')}${unc.length?`<br>확인 필요: ${unc.map(esc).join(' / ')}`:''}<br>잘못 불러왔다면 위의 ‘되돌리기’를 누르세요.`;
+  renderInputs();renderResults();}
+ catch(err){msg.className='msg err';msg.textContent=err&&err.code==='rate_limited'?'요청이 많습니다. 잠시 뒤 다시 시도하세요.':'불러오지 못했습니다. 내용을 조금 줄여 다시 시도하세요.'}
+ btn.disabled=false;
+}
+function aiUI(){$('#extract-btn').disabled=!S;$('#review-btn').disabled=!S;if(!S)$('#imp-msg').textContent='이 화면에서는 AI 불러오기를 쓸 수 없습니다. 값을 직접 입력하세요.';renderResults()}
+showTab('hours');renderInputs();renderResults();
+$('#extract-btn').disabled=true;$('#review-btn').disabled=true;
+if(window.claude&&claude.use){
+ claude.use('sample').then(x=>{S=x;aiUI()}).catch(()=>aiUI());
+ claude.use('downloads').then(x=>{D=x;$('#save-btn').hidden=!D}).catch(()=>{});
+}else aiUI();
+}
+</script>
+</body>
+</html>
