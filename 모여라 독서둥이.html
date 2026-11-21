@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>모여라 독서둥이</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 다정하고 또렷한 교실 도구. 아이에게는 칭찬, 교사에게는 한눈에 보이는 현황.
+   IDEA: 교실 뒤편 학급 책장 + 책에 꽂는 책갈피.
+   PICTURE: 머리띠의 책장(읽는 책들이 꽂힌 책등), 책마다 책갈피가 꽂힌 진행 막대.
+   COLOUR and TYPE: 잉크 파랑 바탕띠, 하늘색 보조, 책갈피 산호색 강조. 제목 Jua, 본문 Noto Sans KR.
+   LAYOUT: 머리띠 책장 → 한 열의 작업 공간(카드). 600px 아래에서 모두 한 줄로 쌓기. */
+:root{color-scheme:light dark;
+--bg:light-dark(#ffffff,#11132a);--ink:light-dark(#191b33,#eef0ff);--soft:light-dark(#5b5f80,#a9aed6);
+--blue:light-dark(#2f3fbf,#2a37a8);--sky:light-dark(#e6f1ff,#1b2148);--line:light-dark(#d9def0,#2e3566);
+--coral:#ff5a3c;--card:light-dark(#ffffff,#171a38);--ok:light-dark(#1d7a4f,#7fd9ad);--warn:light-dark(#b3261e,#ff9a8f)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Noto Sans KR",system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:Jua,"Noto Sans KR",sans-serif;font-weight:400;line-height:1.1;margin:0;text-wrap:balance}
+h1{font-size:clamp(34px,6vw,50px)}h2{font-size:28px}h3{font-size:21px}
+.band{padding:clamp(24px,4vw,52px) max(5vw,16px)}
+.top{background:var(--blue);color:#fff}
+.top .in{max-width:1000px;margin:auto;display:grid;gap:18px}
+.top p{margin:6px 0 0;color:#dfe4ff}
+.shelf{display:block;width:100%;height:150px}
+.who{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.chip{background:rgba(255,255,255,.16);color:#fff;border-radius:99px;padding:6px 14px;font-size:14px}
+main{max-width:1000px;margin:auto;padding:24px max(5vw,16px) 64px;display:grid;gap:22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:clamp(18px,3vw,28px);display:grid;gap:14px}
+.sky{background:var(--sky);border-color:transparent}
+label{font-weight:500;font-size:15px;display:grid;gap:6px}
+input,textarea,select{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;width:100%;min-height:46px}
+input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px;align-items:end}
+button{font:inherit;font-weight:700;min-height:46px;border-radius:12px;border:0;padding:10px 18px;cursor:pointer;background:var(--blue);color:#fff}
+button.ghost{background:transparent;color:var(--blue);border:1.5px solid var(--line)}
+:root[data-theme=dark] button.ghost{color:#b9c2ff}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) button.ghost{color:#b9c2ff}}
+button.hot{background:var(--coral)}
+button:disabled{opacity:.5;cursor:default}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+.muted{color:var(--soft);font-size:14px;margin:0}
+.books{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:14px}
+.book{all:unset;box-sizing:border-box;cursor:pointer;display:grid;gap:10px;padding:16px;border-radius:16px;border:1.5px solid var(--line);background:var(--card)}
+.book[aria-pressed=true]{border-color:var(--blue);box-shadow:0 0 0 3px var(--sky)}
+.book:focus-visible{outline:3px solid var(--coral)}
+.book b{font-family:Jua,sans-serif;font-weight:400;font-size:20px}
+.meter{position:relative;height:26px;border-radius:6px;background:repeating-linear-gradient(90deg,var(--sky) 0 6px,var(--bg) 6px 8px);border:1px solid var(--line)}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--blue);border-radius:5px 0 0 5px;transition:width .6s}
+.meter s{position:absolute;top:-6px;width:14px;height:40px;margin-left:-7px;background:var(--coral);clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%)}
+.cam{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:14px;background:var(--coral);color:#fff;font-weight:700;cursor:pointer;padding:10px 18px}
+.cam:focus-within{outline:3px solid var(--blue);outline-offset:2px}.cam input{position:absolute;width:1px;height:1px;opacity:0}
+.cam svg{width:26px;height:26px;flex:none}.shot{display:block;max-width:220px;width:100%;border-radius:12px;border:1px solid var(--line)}
+.big{font-family:Jua,sans-serif;font-size:clamp(40px,8vw,64px);line-height:1;color:var(--blue)}
+:root[data-theme=dark] .big{color:#b9c2ff}
+.logs{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.logs li{border-left:4px solid var(--coral);padding:4px 0 4px 14px}
+.logs .d{font-size:13px;color:var(--soft);white-space:nowrap}
+.reply{background:var(--sky);border-radius:12px;padding:10px 14px;margin-top:6px;font-size:15px}
+.note{border-radius:12px;padding:12px 14px;background:var(--sky);font-size:15px}
+.note.warn{background:light-dark(#fdecea,#3a1717);color:var(--warn)}
+.q{border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px}
+.fb{font-size:15px;display:grid;gap:4px}.fb span{display:block}
+.opts{display:grid;gap:8px}
+.opts label{display:flex;gap:10px;align-items:center;font-weight:400;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;min-height:46px}
+.opts input{width:22px;min-height:22px;height:22px;flex:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:12px}
+.stat{background:var(--sky);border-radius:14px;padding:14px}
+.stat b{display:block;font-family:Jua,sans-serif;font-weight:400;font-size:38px;line-height:1;color:var(--blue)}
+:root[data-theme=dark] .stat b{color:#b9c2ff}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n{text-align:right;white-space:nowrap}
+.tag{display:inline-block;padding:2px 10px;border-radius:99px;font-size:13px;background:var(--sky);white-space:nowrap}
+.tag.done{background:light-dark(#dcf3e7,#173a2a);color:var(--ok)}
+.tag.red{background:light-dark(#fdecea,#3a1717);color:var(--warn)}
+details summary{cursor:pointer;font-weight:700;min-height:32px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;max-width:min(92vw,520px);font-size:15px;z-index:9}
+pre,.scroll{overflow-x:auto}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:6.5em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:6em;margin-inline-start:-6.5em;color:var(--soft)}.stack td:empty{display:none}}
+@media(prefers-reduced-motion:reduce){.meter i{transition:none}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header class="band top"><div class="in">
+  <div>
+    <h1>모여라 독서둥이</h1>
+    <p id="sub">읽은 만큼 책갈피를 옮기고, 다 읽으면 퀴즈를 만들어 같은 책 친구들과 모여요.</p>
+  </div>
+  <svg class="shelf" id="shelf" role="img" aria-label="학급 책장"></svg>
+  <div class="who" id="who"><span class="chip">불러오는 중…</span></div>
+</div></header>
+<main id="app"><div class="card"><p class="muted">책장을 여는 중이에요…</p></div></main>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const md=s=>s?String(s).slice(5).replace('-','/'):'';
+const tkey=t=>String(t||'').replace(/[\s\p{P}\p{S}]/gu,'').toLowerCase();
+const rid=()=>Math.random().toString(36).slice(2,9);
+const TPW='1234';
+const CHEER=['첫 장을 넘긴 오늘이 제일 멋진 날이야!','천천히 읽어도 괜찮아. 끝까지 함께할게!','어떤 이야기가 기다리고 있을까? 두근두근!','매일 조금씩 읽으면 금방 책갈피가 끝에 닿을 거야!'];
+const S={uid:null,db:null,user:null,ai:null,aiImg:false,local:false,teacher:false,view:'student',readers:{},alerts:{},loading:true,sel:null,photo:null,busy:'',fb:{},qd:{},solving:null,confirm:null};
+
+/* ---------- 저장 ---------- */
+let chain=Promise.resolve();
+function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+const me=()=>S.readers[S.uid]||null;
+function saveMe(d){
+  d.ts=Date.now();S.readers[S.uid]=d;render();
+  chain=chain.then(async()=>{
+    if(S.local)return lsSet('dsd-readers',S.readers);
+    await S.db.doc('readers/'+S.uid).set(JSON.parse(JSON.stringify(d)));
+  }).catch(e=>toast(e&&e.code==='invalid_argument'?'저장하지 못했어요. 선생님께 이 페이지의 "참여자" 권한을 받았는지 확인해 주세요.':'저장하지 못했어요. 잠시 뒤 다시 해 주세요.'));
+}
+async function addAlert(item){
+  const cur=S.alerts[S.uid]||{items:[]};const next={items:[...(cur.items||[]),item].slice(-50)};
+  S.alerts[S.uid]=next;
+  try{ if(S.local)lsSet('dsd-alerts',S.alerts); else await S.db.doc('alerts/'+S.uid).set(next);}catch(e){}
+}
+async function resolveAlert(uid,i){
+  const cur=S.alerts[uid];if(!cur)return;const items=cur.items.map((x,j)=>j===i?{...x,ok:true}:x);
+  S.alerts[uid]={items};render();
+  try{ if(S.local)lsSet('dsd-alerts',S.alerts); else await S.db.doc('alerts/'+uid).set({items});}catch(e){toast('확인 표시를 저장하지 못했어요.')}
+}
+
+/* ---------- AI ---------- */
+async function askJSON(prompt,opts={}){
+  if(typeof S.ai.json==='function'){try{return await S.ai.json(prompt,opts)}catch(e){if(e&&e.code)throw e}}
+  const r=await S.ai(prompt+'\n다른 말 없이 JSON 하나만 출력해.',opts);
+  const m=String(r.text||'').match(/\{[\s\S]*\}/);if(!m)throw new Error('json');return JSON.parse(m[0]);
+}
+const aiErr=e=>e&&e.code==='rate_limited'?'AI가 잠깐 쉬는 중이에요. 조금 뒤에 다시 눌러 주세요.':e&&e.code==='not_granted'?'AI 사용이 허용되지 않았어요. 쪽수는 직접 적어 주세요.':'AI가 답하지 못했어요. 다시 해 보거나 직접 적어 주세요.';
+async function shrink(file){
+  const url=URL.createObjectURL(file);
+  try{const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});
+    const k=Math.min(1,1280/Math.max(img.width,img.height));const c=document.createElement('canvas');
+    c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    return await new Promise(ok=>c.toBlob(ok,'image/jpeg',.82));}finally{URL.revokeObjectURL(url)}
+}
+async function readPhoto(file,book){
+  if(S.shot)URL.revokeObjectURL(S.shot);S.shot=URL.createObjectURL(file);
+  if(!S.ai){S.photo={manual:true};render();return}
+  S.busy='photo';S.photo=null;render();
+  try{
+    const blob=await shrink(file);
+    const r=await askJSON(`초등학생이 지금 읽고 있는 책 「${book.title}」(전체 ${book.total}쪽)의 펼친 페이지 사진이야.
+1) 사진에 인쇄된 쪽 번호를 찾아. 두 쪽이 보이면 큰 번호를 써. 안 보이면 null.
+2) 사진에 사람 얼굴, 이름표, 손으로 쓴 이름, 주소, 전화번호, 학교·반 이름 같은 개인정보가 보이면 personal을 true로.
+JSON 형식: {"page": 숫자 또는 null, "personal": true/false, "msg": "학생에게 할 짧고 다정한 한 문장"}`,{images:[blob],modelTier:'quick',cache:false});
+    S.photo={page:r.page!==null&&Number.isFinite(+r.page)&&r.page!==null?+r.page:null,personal:!!r.personal,msg:String(r.msg||'')};
+  }catch(e){S.photo={error:aiErr(e)}}
+  S.busy='';render();
+}
+
+/* ---------- 계산 ---------- */
+const last=b=>(b.logs&&b.logs.length)?b.logs[b.logs.length-1].page:0;
+const pct=b=>Math.min(100,Math.round(last(b)/Math.max(1,b.total)*100));
+function stage(b){return b.quizDone?'모임':b.done?'퀴즈 만들기':'읽는 중'}
+function groups(){
+  const g={};
+  for(const[uid,r]of Object.entries(S.readers))for(const b of(r.books||[]))if(b.quizDone){
+    const k=tkey(b.title);(g[k]=g[k]||{title:b.title,members:[]}).members.push({uid,nick:r.nick,book:b});
+  }
+  return g;
+}
+
+/* ---------- 그리기 ---------- */
+function shelf(){
+  const svg=$('#shelf');const W=svg.clientWidth||800,H=150;
+  let books=S.view==='teacher'?Object.values(S.readers).flatMap(r=>r.books||[]):(me()?.books||[]);
+  const slots=Math.max(1,Math.floor(W/36));books=books.slice(0,slots).map(b=>({b}));while(books.length<slots)books.push({b:{title:'',total:1,logs:[]},ph:1});
+  const cols=['#ffd36e','#8fd3ff','#ff8a6e','#b6a6ff','#7fe0b8','#ffffff'];
+  let x=8,out=`<rect x="0" y="${H-14}" width="${W}" height="14" rx="3" fill="rgba(0,0,0,.25)"/>`;
+  books.forEach(({b,ph:sample},i)=>{
+    const h=70+((b.title||'x').length*13+i*17)%60,w=24+(i*7)%14,y=H-14-h,c=cols[i%cols.length],p=sample?0:pct(b);
+    if(x+w>W)return;
+    out+=`<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${c}" opacity="${sample?.22:1}"/>
+      <rect x="${x}" y="${y}" width="3" height="${h}" fill="rgba(255,255,255,.5)"/>
+      <rect x="${x+4}" y="${y+12}" width="${w-8}" height="3" fill="rgba(0,0,0,.18)"/>
+      ${p>0?`<path d="M${x+w/2-4} ${y-4} h8 v${Math.max(10,h*p/100*.5)} l-4 -5 l-4 5z" fill="#ff5a3c"/>`:''}</g>`;
+    x+=w+(i%3===2?10:4);
+  });
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.innerHTML=out;
+}
+const meter=b=>{const p=pct(b);return `<div class="meter" role="img" aria-label="${p}퍼센트 읽음"><i style="width:${p}%"></i><s style="left:${p}%"></s></div>`};
+
+function vOnboard(){return `<form class="card sky" data-form="nick"><h2>반가워! 이름표를 만들어 볼까?</h2>
+<p class="muted">선생님이 알아볼 수 있게 <b>번호와 별명</b>만 적어 줘. 진짜 이름 전체나 전화번호는 적지 마.</p>
+<div class="row"><label>번호와 별명<input id="nick" maxlength="12" placeholder="예) 12번 하늘" required></label><button>책장 열기</button></div></form>`}
+
+function vNewBook(){return `<details class="card" ${me().books?.length?'':'open'}><summary>새 책 읽기 시작하기</summary>
+<form data-form="book" class="row" style="margin-top:8px">
+<label>책 제목<input id="bt" maxlength="40" required placeholder="예) 마당을 나온 암탉"></label>
+<label>전체 쪽수<input id="bp" type="number" min="10" max="2000" required inputmode="numeric" placeholder="예) 192"></label>
+<label>목표 완독일<input id="bg" type="date" min="${today()}"></label>
+<button class="hot">오늘부터 읽기</button></form></details>`}
+
+function vBookList(){const r=me();if(!r.books?.length)return '';
+return `<section class="card"><h2>${esc(r.nick)}의 책장</h2><div class="books">${r.books.map(b=>`
+<button class="book" data-act="sel" data-id="${b.id}" aria-pressed="${S.sel===b.id}">
+<b>${esc(b.title)}</b>${meter(b)}<span class="muted">${last(b)} / ${b.total}쪽 · ${pct(b)}% · <span class="tag ${b.quizDone?'done':''}">${stage(b)}</span></span></button>`).join('')}</div></section>`}
+
+function vLogForm(b){
+  const P=S.photo;let photo='';
+  photo=`<label class="cam" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>${S.busy==='photo'?'사진 확인 중…':'지금 읽는 페이지 찍기'}<input type="file" id="ph" accept="image/*" capture="environment" ${S.busy?'disabled':''}></label>
+  <p class="muted">휴대폰·태블릿에서는 카메라가 바로 열리고, 컴퓨터에서는 사진 파일을 고를 수 있어요. 펼친 페이지의 <b>쪽 번호가 보이게</b> 책만 찍어 줘. 얼굴이나 이름표는 나오지 않게! 사진은 쪽수 확인에만 쓰고 저장하지 않아요.</p>
+  ${S.shot?`<img class="shot" src="${S.shot}" alt="방금 찍은 책 페이지">`:''}`;
+  photo+=`
+  ${S.busy==='photo'?'<p class="note">사진에서 쪽 번호를 찾는 중…</p>':''}
+  ${P?.error?`<p class="note warn">${esc(P.error)}</p>`:''}
+  ${P&&P.personal?`<p class="note warn">사진에 얼굴이나 이름 같은 개인정보가 보여요. 책 페이지만 다시 찍어 줄래?</p>`:''}
+  ${P&&P.manual?`<p class="note">사진을 찍었어! 몇 쪽인지 아래에 직접 적어 줘.</p>`:''}
+  ${P&&!P.personal&&!P.error&&!P.manual?`<p class="note">${P.page?`사진에서 <b>${P.page}쪽</b>을 찾았어! `:'쪽 번호를 못 찾았어. 직접 적어 줘. '}${esc(P.msg)}</p>`:''}`;
+  const pv=P&&!P.personal&&P.page?P.page:'';
+  return `<form data-form="log" class="q"><h3>오늘 어디까지 읽었니?</h3>${photo}
+  <div class="row"><label>읽은 쪽<input id="lp" type="number" min="1" max="${b.total}" required inputmode="numeric" value="${pv}" placeholder="예) ${Math.min(b.total,last(b)+20)}"></label></div>
+  <label>느낀 점 한 줄<input id="ln" maxlength="80" required placeholder="지금까지 가장 기억에 남는 장면은?"></label>
+  <div class="btns"><button ${S.busy?'disabled':''}>${S.busy==='log'?'기록하는 중…':'책갈피 꽂기'}</button></div></form>`;
+}
+
+function vQuizBuild(b){
+  const d=S.qd[b.id]||b.quizDraft||[{},{},{}],fb=S.fb[b.id];
+  return `<section class="q"><h3>친구들이 풀 퀴즈 3문제 만들기</h3>
+  <p class="muted">답이 책 속에 분명히 있는 문제로 만들어 줘. 정답 1개와 헷갈리는 오답 2개를 적으면 친구에게 세 개 중 고르는 문제로 보여요.</p>
+  ${[0,1,2].map(i=>`<div class="q"><b>${i+1}번 문제</b>
+   <label>문제<input data-q="${b.id}:${i}:q" id="q${i}q" maxlength="100" value="${esc(d[i]?.q)}"></label>
+   <div class="row"><label>정답<input data-q="${b.id}:${i}:a" id="q${i}a" maxlength="40" value="${esc(d[i]?.a)}"></label>
+   <label>오답 1<input data-q="${b.id}:${i}:w1" id="q${i}w1" maxlength="40" value="${esc(d[i]?.w1)}"></label>
+   <label>오답 2<input data-q="${b.id}:${i}:w2" id="q${i}w2" maxlength="40" value="${esc(d[i]?.w2)}"></label></div>
+   ${fb?.items?.[i]?`<div class="note fb"><span><b>잘한 점</b> ${esc(fb.items[i].good)}</span>${fb.items[i].fix?`<span><b>고칠 점</b> ${esc(fb.items[i].fix)}</span>`:''}${fb.items[i].hint?`<span><b>생각해 보기</b> ${esc(fb.items[i].hint)}</span>`:''}</div>`:''}
+  </div>`).join('')}
+  ${fb?.error?`<p class="note warn">${esc(fb.error)}</p>`:''}${fb?.unsafe?`<p class="note warn">친구가 기분 나쁠 수 있는 표현이 있어요. 고친 다음 제출해 줘.</p>`:''}
+  <div class="btns">${S.ai?`<button class="ghost" data-act="qcheck" data-id="${b.id}" ${S.busy?'disabled':''}>${S.busy==='quiz'?'점검하는 중…':'AI에게 점검받기'}</button>`:''}
+  <button class="hot" data-act="qsubmit" data-id="${b.id}" ${S.busy?'disabled':''}>퀴즈 완성! 모임 열기</button></div></section>`;
+}
+
+function vGroup(b){
+  const g=groups()[tkey(b.title)]||{members:[]},friends=g.members.filter(m=>m.uid!==S.uid),solved=me().solved||{};
+  let solve='';
+  if(S.solving&&S.solving.bid&&friends.some(f=>f.uid===S.solving.uid)){
+    const f=friends.find(x=>x.uid===S.solving.uid);
+    solve=`<form class="q" data-form="solve"><h3>${esc(f.nick)}의 퀴즈</h3>${S.solving.qs.map((q,i)=>`<fieldset class="opts" style="border:0;padding:0;margin:0"><legend><b>${i+1}. ${esc(q.q)}</b></legend>
+     ${q.o.map((o,j)=>`<label><input type="radio" name="s${i}" value="${j}" required>${esc(o)}</label>`).join('')}</fieldset>`).join('')}
+     <div class="btns"><button>채점하기</button><button type="button" class="ghost" data-act="unsolve">닫기</button></div></form>`;
+  }
+  return `<section class="q"><h3>「${esc(b.title)}」 독서 모임</h3>
+  ${friends.length?`<p class="muted">같은 책을 다 읽고 퀴즈까지 만든 친구 ${friends.length}명이 모였어요. 서로의 퀴즈를 풀어 봐!</p>
+  <ul class="logs">${friends.map(f=>{const s=solved[f.uid+':'+f.book.id];return `<li><b>${esc(f.nick)}</b> ${s?`<span class="tag done">${s.s}/${s.t} 맞힘</span>`:''}<div class="btns" style="margin-top:6px"><button class="ghost" data-act="solve" data-uid="${esc(f.uid)}" data-bid="${esc(f.book.id)}">퀴즈 풀기</button></div></li>`}).join('')}</ul>`
+  :`<p class="note">아직 이 책을 다 읽은 친구가 없어요. 친구가 퀴즈를 완성하면 여기로 모여요! 친구에게 이 책을 추천해 볼까?</p>`}
+  ${solve}</section>`;
+}
+
+function vDetail(){
+  const b=(me().books||[]).find(x=>x.id===S.sel);if(!b)return '';
+  const left=b.goal?Math.ceil((new Date(b.goal)-new Date(today()))/864e5):null;
+  return `<section class="card"><div class="row" style="align-items:center"><div><h2>${esc(b.title)}</h2>
+  <p class="muted">${md(b.start)} 시작${b.goal?` · 목표 ${md(b.goal)}${!b.done&&left!==null?(left>=0?` (${left}일 남음)`:' (목표일 지남, 괜찮아!)'):''}`:''}</p></div>
+  <div style="text-align:right"><span class="big">${pct(b)}%</span><p class="muted">${last(b)} / ${b.total}쪽</p></div></div>
+  ${meter(b)}
+  ${b.cheer?`<p class="note">${esc(b.cheer)}</p>`:''}
+  ${!b.done?vLogForm(b):''}
+  ${!b.done?(S.confirm===b.id?`<div class="note">정말 끝까지 다 읽었니? 다 읽었으면 퀴즈 만들기로 넘어가요.<div class="btns" style="margin-top:8px"><button class="hot" data-act="finish" data-id="${b.id}">네, 다 읽었어요!</button><button class="ghost" data-act="nofinish">아직이요</button></div></div>`
+    :`<div class="btns"><button class="ghost" data-act="askfinish" data-id="${b.id}">다 읽었어요</button></div>`):''}
+  ${b.done&&!b.quizDone?vQuizBuild(b):''}
+  ${b.quizDone?vGroup(b):''}
+  ${b.logs?.length?`<h3>책갈피 기록</h3><ul class="logs">${[...b.logs].reverse().map(l=>`<li><span class="d">${md(l.d)} · ${l.page}쪽</span><div>${esc(l.note)}</div>${l.reply?`<div class="reply">${esc(l.reply)}</div>`:''}</li>`).join('')}</ul>`:''}
+  </section>`;
+}
+
+function vTeacher(){
+  const rs=Object.entries(S.readers),all=rs.flatMap(([u,r])=>(r.books||[]).map(b=>({u,r,b}))),g=Object.values(groups()).filter(x=>x.members.length>1);
+  const al=Object.entries(S.alerts).flatMap(([u,a])=>(a.items||[]).map((x,i)=>({u,i,...x}))).filter(x=>!x.ok);
+  return `<section class="card"><h2>우리 반 독서 현황</h2><div class="stats">
+  <div class="stat"><b>${rs.length}</b>참여 학생</div><div class="stat"><b>${all.filter(x=>!x.b.done).length}</b>읽는 중인 책</div>
+  <div class="stat"><b>${all.filter(x=>x.b.done).length}</b>완독</div><div class="stat"><b>${all.filter(x=>x.b.quizDone).length}</b>퀴즈 완성</div><div class="stat"><b>${g.length}</b>독서 모임</div></div>
+  ${rs.length?'':'<p class="note">아직 들어온 학생이 없어요. 오른쪽 위 공유 버튼에서 학생들에게 이 페이지를 <b>참여자</b> 권한으로 공유해 주세요.</p>'}</section>
+  <section class="card"><h2>살펴볼 기록 <span class="tag ${al.length?'red':''}">${al.length}</span></h2>
+  ${al.length?`<ul class="logs">${al.map(x=>`<li><span class="d">${md(x.d)} · ${esc(S.readers[x.u]?.nick||'학생')} · 「${esc(x.book)}」 · ${x.kind==='risk'?'위험 신호':'부적절 표현'}</span><div>${esc(x.text)}</div><div class="btns" style="margin-top:6px"><button class="ghost" data-act="resolve" data-uid="${esc(x.u)}" data-i="${x.i}">확인했어요</button></div></li>`).join('')}</ul>`
+  :'<p class="muted">AI가 위험 신호(자해·폭력·괴롭힘 등)나 부적절한 표현을 찾으면 학생 화면에는 저장하지 않고 이곳에만 보여 드려요. 지금은 없어요.</p>'}</section>
+  <section class="card"><h2>학생별 책갈피</h2>${all.length?`<div class="scroll"><table class="stack"><thead><tr><th>학생</th><th>책</th><th>진행</th><th>최근 기록</th><th>단계</th></tr></thead><tbody>
+  ${all.sort((a,b)=>String(a.r.nick).localeCompare(String(b.r.nick),'ko',{numeric:true})).map(({r,b})=>`<tr><td>${esc(r.nick)}</td><td>${esc(b.title)}</td><td class="n">${pct(b)}% (${last(b)}/${b.total})</td><td>${b.logs?.length?esc(md(b.logs[b.logs.length-1].d)+' '+b.logs[b.logs.length-1].note):'-'}</td><td><span class="tag ${b.quizDone?'done':''}">${stage(b)}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">기록이 생기면 여기에 쌓여요.</p>'}</section>
+  <section class="card"><h2>독서 모임</h2>${g.length?g.map(x=>`<div class="q"><h3>「${esc(x.title)}」 ${x.members.length}명</h3><p style="margin:0">${x.members.map(m=>esc(m.nick)).join(', ')}</p>
+  <details><summary>퀴즈 보기</summary>${x.members.map(m=>`<p><b>${esc(m.nick)}</b><br>${(m.book.quiz||[]).map((q,i)=>`${i+1}. ${esc(q.q)} → <b>${esc(q.a)}</b>`).join('<br>')}</p>`).join('')}</details></div>`).join('')
+  :'<p class="muted">같은 책을 다 읽고 퀴즈를 만든 학생이 2명 이상이면 모임이 자동으로 생겨요.</p>'}</section>`;
+}
+
+function render(){
+  const keep={},act=document.activeElement?.id;
+  document.querySelectorAll('#app input:not([type=file]):not([type=radio]),#app textarea').forEach(e=>{if(e.id)keep[e.id]=e.value});
+  const radios=[...document.querySelectorAll('#app input[type=radio]:checked')].map(e=>e.name+'='+e.value);
+  const openD=[...document.querySelectorAll('#app details')].map(d=>d.open);
+  const who=$('#who');
+  who.innerHTML=S.loading?'<span class="chip">불러오는 중…</span>':`<button class="ghost" style="color:#fff;border-color:rgba(255,255,255,.4)" data-act="view">${S.view==='teacher'?'학생 화면으로':'선생님 화면'}</button>${me()?`<span class="chip">${esc(me().nick)}</span>`:''}${S.local?'<span class="chip">이 기기에만 임시 저장 중</span>':''}`;
+  let h='';
+  if(S.loading)h='<div class="card"><p class="muted">책장을 여는 중이에요…</p></div>';
+  else if(S.view==='pw')h=`<form class="card sky" data-form="pw"><h2>선생님 화면</h2><p class="muted">선생님 비밀번호를 입력해 주세요.</p>
+   <div class="row"><label>비밀번호<input id="pw" type="password" inputmode="numeric" autocomplete="off" required></label><button>들어가기</button></div>
+   ${S.pwErr?'<p class="note warn">비밀번호가 맞지 않아요.</p>':''}<div class="btns"><button type="button" class="ghost" data-act="back">돌아가기</button></div></form>`;
+  else if(S.view==='teacher')h=vTeacher();
+  else if(!me())h=vOnboard();
+  else h=vNewBook()+vBookList()+vDetail()+(S.ai?'':'<p class="muted">AI 도우미에 연결되지 않아 사진 확인과 피드백 없이 기록만 저장돼요.</p>');
+  $('#app').innerHTML=h;
+  for(const[k,v]of Object.entries(keep)){const e=document.getElementById(k);if(e&&!e.matches('[data-q]'))e.value=v}
+  radios.forEach(r=>{const[n,v]=r.split('=');const e=document.querySelector(`#app input[name="${n}"][value="${v}"]`);if(e)e.checked=true});
+  document.querySelectorAll('#app details').forEach((d,i)=>{if(openD[i]!==undefined)d.open=openD[i]});
+  if(act)document.getElementById(act)?.focus();
+  shelf();
+}
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,4200)}
+
+/* ---------- 행동 ---------- */
+const clone=o=>JSON.parse(JSON.stringify(o));
+function upBook(id,fn){const r=clone(me());const b=r.books.find(x=>x.id===id);fn(b,r);saveMe(r)}
+document.addEventListener('submit',async e=>{
+  const f=e.target.dataset.form;if(!f)return;e.preventDefault();
+  if(f==='pw'){const v=$('#pw').value;$('#pw').value='';if(v===TPW){S.view='teacher';try{sessionStorage.setItem('dsd-t','1')}catch(_){}}else S.pwErr=true;render();return}
+  if(f==='nick'){const n=$('#nick').value.trim();if(!n)return;saveMe({nick:n,books:[],solved:{}});}
+  if(f==='book'){
+    const t=$('#bt').value.trim(),p=+$('#bp').value,g=$('#bg').value;if(!t||!(p>0))return;
+    const r=clone(me());const b={id:rid(),title:t,total:p,start:today(),goal:g||'',logs:[],done:false,quizDone:false,cheer:CHEER[Math.floor(Math.random()*CHEER.length)]};
+    r.books=[...(r.books||[]),b];S.sel=b.id;S.photo=null;e.target.reset();saveMe(r);toast('「'+t+'」 읽기 시작! 오늘 날짜로 책갈피를 꽂았어요.');
+  }
+  if(f==='log'){
+    const b=me().books.find(x=>x.id===S.sel),page=+$('#lp').value,note=$('#ln').value.trim();
+    if(!(page>0)||page>b.total){toast('1부터 '+b.total+' 사이의 쪽수를 적어 줘.');return}
+    if(S.photo&&S.photo.personal){toast('개인정보가 보이는 사진이에요. 다시 찍거나 사진 없이 기록해 줘.');S.photo=null;render();return}
+    let reply='',save=true,clean=note;
+    if(S.ai){S.busy='log';render();
+      try{const r=await askJSON(`너는 초등학생의 독서를 도와주는 친절한 독서 친구야.
+학생이 책 「${b.title}」을 ${page}/${b.total}쪽까지 읽고 느낀 점을 한 줄 썼어: "${note.replace(/"/g,"'")}"
+- reply: 칭찬을 먼저 하고, 쉽고 다정한 말투로 1~2문장. 다음 내용을 기대하게 하는 질문 하나로 끝내. 책 내용을 모르면 지어내지 마. 다른 친구와 비교하지 마.
+- risk: 자해·자살·폭력·학대·괴롭힘을 당하는 것 같은 위험 신호가 학생 자신에 대해 보이면 true (책 속 이야기를 말하는 것이면 false).
+- bad: 욕설, 비하, 차별, 성적인 표현이 있으면 true.
+- personal: 실명 전체, 전화번호, 주소 같은 개인정보가 있으면 true.
+JSON 형식: {"reply":"...","risk":false,"bad":false,"personal":false}`,{modelTier:'quick',cache:false});
+        if(r.personal){S.busy='';render();toast('이름이나 연락처 같은 개인정보는 빼고 다시 적어 줘.');return}
+        if(r.bad){S.busy='';await addAlert({d:today(),book:b.title,text:note,kind:'bad'});render();toast('친구와 선생님이 함께 보는 기록이라 고운 말로 다시 적어 줄래?');return}
+        if(r.risk){save=true;clean='(선생님께 전달된 기록)';reply='솔직하게 적어 줘서 고마워. 이 마음은 선생님께 전해 둘게. 혼자 힘들어하지 말고 선생님이나 믿는 어른에게 꼭 이야기해 줘. 청소년 상담 전화 1388도 언제든 도와줘.';await addAlert({d:today(),book:b.title,text:note,kind:'risk'});}
+        else reply=String(r.reply||'');
+      }catch(err){toast(aiErr(err))}
+      S.busy='';
+    }
+    if(save){S.photo=null;S.shot=null;upBook(b.id,bk=>{bk.logs=[...(bk.logs||[]),{d:today(),page,note:clean,reply}]});
+      const f2=$('#ln');if(f2)f2.value='';const p2=$('#lp');if(p2)p2.value='';
+      if(page>=b.total){S.confirm=b.id;render()}}
+  }
+  if(f==='solve'){
+    const qs=S.solving.qs;let s=0;qs.forEach((q,i)=>{const c=document.querySelector(`input[name="s${i}"]:checked`);if(c&&+c.value===q.k)s++});
+    const r=clone(me());r.solved={...(r.solved||{}),[S.solving.uid+':'+S.solving.bid]:{s,t:qs.length}};S.solving=null;saveMe(r);
+    toast(s===qs.length?'모두 맞혔어! 이 책을 정말 꼼꼼히 읽었구나.':`${qs.length}문제 중 ${s}문제 맞혔어. 친구와 어떤 장면이었는지 이야기해 봐!`);
+  }
+});
+document.addEventListener('input',e=>{
+  const k=e.target.dataset?.q;if(!k)return;const[id,i,f]=k.split(':');
+  const b=me()?.books.find(x=>x.id===id);S.qd[id]=S.qd[id]||clone(b?.quizDraft||[{},{},{}]);S.qd[id][i][f]=e.target.value;
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='ph'&&e.target.files[0]){const b=me().books.find(x=>x.id===S.sel);readPhoto(e.target.files[0],b)}
+});
+document.addEventListener('click',async e=>{
+  const t=e.target.closest('[data-act]');if(!t)return;const a=t.dataset.act,id=t.dataset.id;
+  if(a==='sel'){S.sel=S.sel===id?null:id;S.photo=null;S.shot=null;S.solving=null;S.confirm=null;render()}
+  if(a==='view'){if(S.view==='teacher'||S.view==='pw')S.view='student';else{let ok=false;try{ok=sessionStorage.getItem('dsd-t')==='1'}catch(_){}S.view=ok?'teacher':'pw';S.pwErr=false}render();if(S.view==='pw')$('#pw')?.focus()}
+  if(a==='back'){S.view='student';render()}
+  if(a==='askfinish'){S.confirm=id;render()}
+  if(a==='nofinish'){S.confirm=null;render()}
+  if(a==='finish'){S.confirm=null;upBook(id,b=>{b.done=true;b.doneAt=today()});toast('완독 축하해! 이제 친구들이 풀 퀴즈를 만들어 보자.')}
+  const draft=()=>S.qd[id]||me().books.find(x=>x.id===id).quizDraft||[{},{},{}];
+  const full=d=>[0,1,2].every(i=>['q','a','w1','w2'].every(f=>String(d[i]?.[f]||'').trim()));
+  if(a==='qcheck'){
+    const d=draft(),b=me().books.find(x=>x.id===id);if(!d.some(x=>x.q)){toast('문제를 하나 이상 적은 다음 점검받아 줘.');return}
+    S.busy='quiz';render();
+    try{const r=await askJSON(`초등학생이 책 「${b.title}」을 다 읽고 친구들이 풀 퀴즈를 만들었어. 각 문제를 점검해 줘.
+규칙: 문제를 대신 만들어 주거나 정답을 고쳐 쓰지 마. 학생이 스스로 고치도록 힌트만 줘. 책 내용을 확실히 모르면 정답이 맞다고 단정하지 말고 "책에서 다시 확인해 보자"라고 해. 칭찬을 먼저 하고 쉽고 다정한 말로 써. 비어 있는 문제는 "아직 비어 있어요"라고만 해.
+점검할 것: 답이 책 속에 분명히 있는지, 문제 문장이 이해하기 쉬운지, 오답이 너무 쉽거나 정답과 같지 않은지.
+문제: ${JSON.stringify(d.map((x,i)=>({번호:i+1,문제:x.q||'',정답:x.a||'',오답:[x.w1||'',x.w2||'']})))}
+JSON 형식: {"items":[{"good":"잘한 점 1문장","fix":"고칠 점 1문장, 없으면 빈 문자열","hint":"스스로 생각해 볼 질문 1개"}],"unsafe": 친구를 놀리거나 부적절한 표현이 있으면 true}`,{modelTier:'quick',cache:false});
+      S.fb[id]={items:r.items||[],unsafe:!!r.unsafe};
+      upBook(id,bk=>{bk.quizDraft=d});
+    }catch(err){S.fb[id]={error:aiErr(err)}}
+    S.busy='';render();
+  }
+  if(a==='qsubmit'){
+    const d=draft();if(!full(d)){toast('세 문제 모두 문제·정답·오답 2개를 채워 줘.');return}
+    if(S.fb[id]?.unsafe){toast('고칠 표현이 있다고 나왔어요. 고친 뒤 다시 점검받아 줘.');return}
+    upBook(id,bk=>{bk.quiz=d.map(x=>({q:x.q.trim(),a:x.a.trim(),w:[x.w1.trim(),x.w2.trim()]}));bk.quizDone=true;delete bk.quizDraft});
+    delete S.qd[id];toast('퀴즈 완성! 같은 책 친구들과 모임이 열렸어요.');
+  }
+  if(a==='solve'){
+    const r=S.readers[t.dataset.uid],b=r?.books?.find(x=>x.id===t.dataset.bid);if(!b)return;
+    const qs=(b.quiz||[]).map(q=>{const o=[q.a,...q.w].map((v,j)=>({v,j})).sort(()=>Math.random()-.5);return{q:q.q,o:o.map(x=>x.v),k:o.findIndex(x=>x.j===0)}});
+    S.solving={uid:t.dataset.uid,bid:t.dataset.bid,qs};render();
+  }
+  if(a==='unsolve'){S.solving=null;render()}
+  if(a==='resolve'){resolveAlert(t.dataset.uid,+t.dataset.i)}
+});
+new ResizeObserver(()=>shelf()).observe($('#shelf'));
+
+/* ---------- 시작 ---------- */
+(async()=>{
+  const C=window.claude;let db=null,user=null,ai=null;
+  if(C&&C.use){[db,user,ai]=await Promise.all([C.use('db'),C.use('user'),C.use('sample')].map(p=>p.catch(()=>null)))}
+  S.ai=ai;if(ai){try{const l=await ai.limits?.();S.aiImg=!!(l&&l.images)}catch(e){S.aiImg=false}}
+  const uid=user?await Promise.resolve().then(()=>user.id()).catch(()=>null):null;
+  if(user){try{S.teacher=!!((await user.isOwner())||(await user.canEdit()))}catch(e){}}
+  if(!db||!uid){
+    S.local=true;S.uid='me';S.readers=lsGet('dsd-readers')||{};S.alerts=lsGet('dsd-alerts')||{};S.teacher=S.teacher||!C;S.loading=false;render();return;
+  }
+  S.db=db;S.uid=uid;
+  const timer=setTimeout(()=>{if(S.loading){S.loading=false;render();toast('기록을 아직 불러오지 못했어요. 인터넷 연결을 확인해 주세요.')}},10000);
+  db.collection('readers').onSnapshot(snap=>{
+    const next={};snap.docs.forEach(d=>{if(d.exists)next[d.id]=d.data()});S.readers=next;
+    if(!snap.metadata.fromCache){clearTimeout(timer)}S.loading=false;
+    if(!S.sel&&me()?.books?.length)S.sel=me().books.find(b=>!b.quizDone)?.id||me().books[0].id;render();
+  },()=>{clearTimeout(timer);S.loading=false;render();toast('기록을 불러오지 못했어요.')});
+  db.collection('alerts').onSnapshot(snap=>{const n={};snap.docs.forEach(d=>{if(d.exists)n[d.id]=d.data()});S.alerts=n;render()},()=>{});
+})();
+render();
+}
+</script>
+</body>
+</html>
